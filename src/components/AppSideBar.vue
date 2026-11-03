@@ -1,5 +1,17 @@
 <script setup>
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+
+const userRole = computed(() => {
+  try {
+    return JSON.parse(localStorage.getItem('user') ?? 'null')?.role ?? null
+  } catch {
+    return null
+  }
+})
+
+const isAdmin = computed(() => userRole.value === 'ADMIN')
+const isLibrarian = computed(() => userRole.value === 'LIBRARIAN')
 </script>
 
 <template>
@@ -17,16 +29,58 @@ import { RouterLink } from 'vue-router'
         Dashboard
       </RouterLink>
 
-      <RouterLink to="/books" class="nav-link" active-class="active">
+      <RouterLink
+        v-if="isAdmin"
+        to="/users"
+        class="nav-link"
+        active-class="active"
+      >
+        Pengguna
+      </RouterLink>
+
+      <RouterLink
+        v-if="isLibrarian"
+        to="/books"
+        class="nav-link"
+        active-class="active"
+      >
         Daftar Buku
       </RouterLink>
 
-      <RouterLink to="/members" class="nav-link" active-class="active">
+      <RouterLink
+        v-if="isLibrarian"
+        to="/authors"
+        class="nav-link"
+        active-class="active"
+      >
+        Penulis
+      </RouterLink>
+
+      <RouterLink
+        v-if="isLibrarian"
+        to="/members"
+        class="nav-link"
+        active-class="active"
+      >
         Anggota
       </RouterLink>
 
-      <RouterLink to="/lendings" class="nav-link" active-class="active">
+      <RouterLink
+        v-if="isLibrarian"
+        to="/lendings"
+        class="nav-link"
+        active-class="active"
+      >
         Peminjaman
+      </RouterLink>
+
+      <RouterLink
+        v-if="userRole === 'MEMBER'"
+        to="/books"
+        class="nav-link"
+        active-class="active"
+      >
+        Daftar Buku
       </RouterLink>
     </nav>
 

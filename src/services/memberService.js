@@ -15,4 +15,9 @@ export const memberService = {
     const response = await api.get(`/members/${id}`)
     return response.data
   },
+
+  async update(id, payload) {
+    const response = await api.patch(`/members/${id}`, payload)
+    return response.data
+  },
 }

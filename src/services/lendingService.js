@@ -15,4 +15,9 @@ export const lendingService = {
     const response = await api.post(`/lendings/${id}/return`)
     return response.data
   },
+
+  async reportLost(id) {
+    const response = await api.post(`/lendings/${id}/report-lost`)
+    return response.data
+  },
 }
