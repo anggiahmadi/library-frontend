@@ -25,6 +25,10 @@ const showCopiesModal = ref(false)
 const selectedBook = ref(null)
 const editingCopy = ref(null)
 const copyForm = ref({ copy_code: '' })
+const showDetailModal = ref(false)
+const detailLoading = ref(false)
+const detailError = ref('')
+const bookDetails = ref(null)
 
 const storedUser = localStorage.getItem('user')
 let currentUser = null
@@ -242,6 +246,30 @@ function canDeleteCopy(copy) {
   return ['AVAILABLE', 'LOST'].includes(String(copy.status).toUpperCase())
 }
 
+async function viewBook(book) {
+  showDetailModal.value = true
+  detailLoading.value = true
+  detailError.value = ''
+  bookDetails.value = book
+
+  try {
+    const response = await bookService.getById(book.id)
+    bookDetails.value = response.data ?? response
+  } catch (error) {
+    detailError.value =
+      error.response?.data?.message ??
+      'Detail buku gagal dimuat.'
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+function closeDetailModal() {
+  showDetailModal.value = false
+  bookDetails.value = null
+  detailError.value = ''
+}
+
 async function deleteCopy(copy) {
   if (!isLibrarian.value || !canDeleteCopy(copy)) return
   if (!window.confirm(`Hapus eksemplar "${copy.copy_code}"?`)) return
@@ -341,7 +369,7 @@ onMounted(loadBooks)
             <th>ISBN</th>
             <th>Status</th>
             <th v-if="isLibrarian">Eksemplar</th>
-            <th v-if="isLibrarian">Aksi</th>
+            <th>Aksi</th>
           </tr>
         </thead>
 
@@ -358,8 +386,15 @@ onMounted(loadBooks)
             <td v-if="isLibrarian">
               {{ book.copies_count ?? book.copies?.length ?? 0 }}
             </td>
-            <td v-if="isLibrarian">
+            <td>
               <div class="table-actions">
+                <button
+                  class="button button-secondary"
+                  @click="viewBook(book)"
+                >
+                  Lihat
+                </button>
+                <template v-if="isLibrarian">
                 <button
                   class="button button-secondary"
                   @click="openCopies(book)"
@@ -378,17 +413,114 @@ onMounted(loadBooks)
                 >
                   Hapus
                 </button>
+                </template>
               </div>
             </td>
           </tr>
 
           <tr v-if="filteredBooks.length === 0">
-            <td :colspan="isLibrarian ? 6 : 4" class="empty-state">
+            <td :colspan="isLibrarian ? 6 : 5" class="empty-state">
               Tidak ada data buku yang sesuai.
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div
+      v-if="showDetailModal"
+      class="modal-backdrop"
+      @click.self="closeDetailModal"
+    >
+      <section
+        class="book-modal book-detail-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="book-detail-title"
+      >
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">BOOK DETAILS</p>
+            <h2 id="book-detail-title">
+              {{ bookDetails?.title ?? 'Detail Buku' }}
+            </h2>
+          </div>
+          <button
+            class="modal-close"
+            type="button"
+            aria-label="Tutup detail buku"
+            @click="closeDetailModal"
+          >
+            &times;
+          </button>
+        </header>
+
+        <div v-if="detailLoading" class="panel">
+          Memuat detail buku...
+        </div>
+        <div v-else-if="detailError" class="alert alert-error">
+          {{ detailError }}
+        </div>
+        <template v-else-if="bookDetails">
+          <dl class="book-detail-grid">
+            <div>
+              <dt>Penulis</dt>
+              <dd>
+                {{ bookDetails.author?.name ?? bookDetails.author_name ?? '-' }}
+              </dd>
+            </div>
+            <div>
+              <dt>ISBN</dt>
+              <dd>{{ bookDetails.isbn ?? '-' }}</dd>
+            </div>
+            <div>
+              <dt>Tahun Terbit</dt>
+              <dd>{{ bookDetails.published_year ?? '-' }}</dd>
+            </div>
+            <div>
+              <dt>Harga Pengganti</dt>
+              <dd>
+                {{
+                  bookDetails.replacement_price == null
+                    ? '-'
+                    : Number(bookDetails.replacement_price).toLocaleString('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                      })
+                }}
+              </dd>
+            </div>
+          </dl>
+
+          <div class="book-detail-section">
+            <h3>Deskripsi</h3>
+            <p class="book-detail-description">
+              {{ bookDetails.description || 'Deskripsi belum tersedia.' }}
+            </p>
+          </div>
+
+          <div class="book-detail-section">
+            <h3>Eksemplar</h3>
+            <div v-if="bookDetails.copies?.length" class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Kode Eksemplar</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="copy in bookDetails.copies" :key="copy.id">
+                    <td>{{ copy.copy_code }}</td>
+                    <td><span class="status-pill">{{ copy.status }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p v-else class="muted">Belum ada data eksemplar.</p>
+          </div>
+        </template>
+      </section>
     </div>
 
     <div
