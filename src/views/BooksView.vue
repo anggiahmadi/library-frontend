@@ -379,9 +379,13 @@ onMounted(loadBooks)
             <td>{{ book.author?.name ?? book.author_name ?? '-' }}</td>
             <td>{{ book.isbn ?? '-' }}</td>
             <td>
-              <span class="status-pill">
-                {{ book.replacement_cost }}
-              </span>
+              {{ book.replacement_price == null
+                ? '-'
+                : Number(book.replacement_price).toLocaleString('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                  }) 
+              }}
             </td>
             <td v-if="isLibrarian">
               {{ book.copies_count ?? book.copies?.length ?? 0 }}
