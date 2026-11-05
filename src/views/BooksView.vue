@@ -367,7 +367,7 @@ onMounted(loadBooks)
             <th>Judul</th>
             <th>Penulis</th>
             <th>ISBN</th>
-            <th>Status</th>
+            <th>Biaya Penggantian</th>
             <th v-if="isLibrarian">Eksemplar</th>
             <th>Aksi</th>
           </tr>
@@ -380,7 +380,7 @@ onMounted(loadBooks)
             <td>{{ book.isbn ?? '-' }}</td>
             <td>
               <span class="status-pill">
-                {{ book.status ?? 'Tidak diketahui' }}
+                {{ book.replacement_cost }}
               </span>
             </td>
             <td v-if="isLibrarian">
