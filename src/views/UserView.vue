@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import PaginatedTable from '../components/PaginatedTable.vue'
 import { userService } from '../services/userService'
+import { loadAllPages } from '../utils/paginatedData'
 
 const users = ref([])
 const loading = ref(false)
@@ -26,13 +28,6 @@ try {
 
 const isAdmin = computed(() => currentUser?.role === 'ADMIN')
 
-function extractItems(response) {
-  if (Array.isArray(response)) return response
-  if (Array.isArray(response.data)) return response.data
-  if (Array.isArray(response.data?.data)) return response.data.data
-  return []
-}
-
 function getErrorMessage(error, fallback) {
   const validationMessages = error.response?.data?.errors
     ? Object.values(error.response.data.errors).flat()
@@ -52,8 +47,7 @@ async function loadUsers() {
   errorMessage.value = ''
 
   try {
-    const response = await userService.getAll()
-    users.value = extractItems(response)
+    users.value = await loadAllPages((page) => userService.getAll({ page }))
   } catch (error) {
     errorMessage.value = getErrorMessage(error, 'Data pengguna gagal dimuat.')
   } finally {
@@ -185,7 +179,12 @@ onMounted(loadUsers)
       <div v-if="loading" class="panel">
         Memuat data pengguna...
       </div>
-      <div v-else class="panel table-wrapper">
+      <PaginatedTable
+        v-else
+        class="panel"
+        :items="filteredUsers"
+        v-slot="{ pageItems }"
+      >
         <table>
           <thead>
             <tr>
@@ -197,7 +196,7 @@ onMounted(loadUsers)
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in filteredUsers" :key="user.id">
+            <tr v-for="user in pageItems" :key="user.id">
               <td>{{ user.name }}</td>
               <td>{{ user.email }}</td>
               <td><span class="status-pill">{{ user.role }}</span></td>
@@ -248,7 +247,7 @@ onMounted(loadUsers)
             </tr>
           </tbody>
         </table>
-      </div>
+      </PaginatedTable>
 
       <div
         v-if="showPasswordForm"

@@ -1,7 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import PaginatedTable from '../components/PaginatedTable.vue'
 import { authorService } from '../services/authorService'
 import { bookService } from '../services/bookService'
+import { extractItems, loadAllPages } from '../utils/paginatedData'
 
 const books = ref([])
 const authors = ref([])
@@ -54,20 +56,12 @@ function emptyBook() {
 
 const form = ref(emptyBook())
 
-function extractItems(response) {
-  if (Array.isArray(response)) return response
-  if (Array.isArray(response.data)) return response.data
-  if (Array.isArray(response.data?.data)) return response.data.data
-  return []
-}
-
 async function loadBooks() {
   loading.value = true
   errorMessage.value = ''
 
   try {
-    const response = await bookService.getAll()
-    books.value = extractItems(response)
+    books.value = await loadAllPages((page) => bookService.getAll({ page }))
   } catch (error) {
     errorMessage.value =
       error.response?.data?.message ??
@@ -82,8 +76,9 @@ async function loadAuthors() {
   authorError.value = ''
 
   try {
-    const response = await authorService.getAll({ total_per_page: 1000 })
-    authors.value = extractItems(response)
+    authors.value = await loadAllPages((page) =>
+      authorService.getAll({ page, total_per_page: 1000 }),
+    )
   } catch (error) {
     authorError.value =
       error.response?.data?.message ??
@@ -170,10 +165,9 @@ async function loadCopies() {
   copyError.value = ''
 
   try {
-    const response = await bookService.getCopies(selectedBook.value.id, {
-      per_page: 100,
-    })
-    copies.value = extractItems(response)
+    copies.value = await loadAllPages((page) =>
+      bookService.getCopies(selectedBook.value.id, { page, per_page: 100 }),
+    )
   } catch (error) {
     copyError.value =
       error.response?.data?.message ??
@@ -360,7 +354,12 @@ onMounted(loadBooks)
       </button>
     </div>
 
-    <div v-else class="panel table-wrapper">
+    <PaginatedTable
+      v-else
+      class="panel"
+      :items="filteredBooks"
+      v-slot="{ pageItems }"
+    >
       <table>
         <thead>
           <tr>
@@ -374,7 +373,7 @@ onMounted(loadBooks)
         </thead>
 
         <tbody>
-          <tr v-for="book in filteredBooks" :key="book.id">
+          <tr v-for="book in pageItems" :key="book.id">
             <td>{{ book.title ?? '-' }}</td>
             <td>{{ book.author?.name ?? book.author_name ?? '-' }}</td>
             <td>{{ book.isbn ?? '-' }}</td>
@@ -429,7 +428,7 @@ onMounted(loadBooks)
           </tr>
         </tbody>
       </table>
-    </div>
+    </PaginatedTable>
 
     <div
       v-if="showDetailModal"
@@ -505,7 +504,11 @@ onMounted(loadBooks)
 
           <div class="book-detail-section">
             <h3>Eksemplar</h3>
-            <div v-if="bookDetails.copies?.length" class="table-wrapper">
+            <PaginatedTable
+              v-if="bookDetails.copies?.length"
+              :items="bookDetails.copies"
+              v-slot="{ pageItems }"
+            >
               <table>
                 <thead>
                   <tr>
@@ -514,13 +517,13 @@ onMounted(loadBooks)
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="copy in bookDetails.copies" :key="copy.id">
+                  <tr v-for="copy in pageItems" :key="copy.id">
                     <td>{{ copy.copy_code }}</td>
                     <td><span class="status-pill">{{ copy.status }}</span></td>
                   </tr>
                 </tbody>
               </table>
-            </div>
+            </PaginatedTable>
             <p v-else class="muted">Belum ada data eksemplar.</p>
           </div>
         </template>
@@ -611,7 +614,11 @@ onMounted(loadBooks)
           Memuat data eksemplar...
         </div>
 
-        <div v-else class="table-wrapper">
+        <PaginatedTable
+          v-else
+          :items="copies"
+          v-slot="{ pageItems }"
+        >
           <table>
             <thead>
               <tr>
@@ -621,7 +628,7 @@ onMounted(loadBooks)
               </tr>
             </thead>
             <tbody>
-              <tr v-for="copy in copies" :key="copy.id">
+              <tr v-for="copy in pageItems" :key="copy.id">
                 <td>{{ copy.copy_code }}</td>
                 <td>
                   <span class="status-pill">{{ copy.status }}</span>
@@ -658,7 +665,7 @@ onMounted(loadBooks)
               </tr>
             </tbody>
           </table>
-        </div>
+        </PaginatedTable>
       </section>
     </div>
 

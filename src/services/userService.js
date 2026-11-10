@@ -1,8 +1,8 @@
 import api from './api'
 
 export const userService = {
-  async getAll() {
-    const response = await api.get('/users')
+  async getAll(params = {}) {
+    const response = await api.get('/users', { params })
     return response.data
   },
 

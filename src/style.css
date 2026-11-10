@@ -538,6 +538,48 @@ textarea {
   overflow-x: auto;
 }
 
+.paginated-table {
+  min-width: 0;
+}
+
+.pagination-controls,
+.pagination-actions,
+.pagination-page-size {
+  display: flex;
+  align-items: center;
+}
+
+.pagination-controls {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.pagination-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pagination-page-size {
+  gap: 8px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.pagination-page-size select {
+  width: auto;
+  margin-bottom: 0;
+}
+
+.pagination-summary,
+.pagination-current-page {
+  color: #6b7280;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

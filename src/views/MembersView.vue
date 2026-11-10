@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import PaginatedTable from '../components/PaginatedTable.vue'
 import { memberService } from '../services/memberService'
+import { loadAllPages } from '../utils/paginatedData'
 
 const members = ref([])
 const loading = ref(false)
@@ -26,13 +28,6 @@ const editForm = ref({
   email: '',
 })
 
-function extractItems(response) {
-  if (Array.isArray(response)) return response
-  if (Array.isArray(response.data)) return response.data
-  if (Array.isArray(response.data?.data)) return response.data.data
-  return []
-}
-
 function getErrorMessage(error, fallback) {
   const validationMessages = error.response?.data?.errors
     ? Object.values(error.response.data.errors).flat()
@@ -50,8 +45,7 @@ async function loadMembers() {
   errorMessage.value = ''
 
   try {
-    const response = await memberService.getAll()
-    members.value = extractItems(response)
+    members.value = await loadAllPages((page) => memberService.getAll({ page }))
   } catch (error) {
     errorMessage.value = getErrorMessage(error, 'Data anggota gagal dimuat.')
   } finally {
@@ -246,7 +240,12 @@ onMounted(loadMembers)
       Memuat data anggota...
     </div>
 
-    <div v-else class="panel table-wrapper">
+    <PaginatedTable
+      v-else
+      class="panel"
+      :items="filteredMembers"
+      v-slot="{ pageItems }"
+    >
       <table>
         <thead>
           <tr>
@@ -259,7 +258,7 @@ onMounted(loadMembers)
         </thead>
 
         <tbody>
-          <tr v-for="member in filteredMembers" :key="member.id">
+          <tr v-for="member in pageItems" :key="member.id">
             <td>{{ member.member_number }}</td>
             <td>{{ member.name }}</td>
             <td>{{ member.email }}</td>
@@ -289,7 +288,7 @@ onMounted(loadMembers)
           </tr>
         </tbody>
       </table>
-    </div>
+    </PaginatedTable>
 
     <div
       v-if="showEditForm"

@@ -2,9 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import Multiselect from '@vueform/multiselect'
 import '@vueform/multiselect/themes/default.css'
+import PaginatedTable from '../components/PaginatedTable.vue'
 import { bookService } from '../services/bookService'
 import { lendingService } from '../services/lendingService'
 import { memberService } from '../services/memberService'
+import { extractItems, loadAllPages } from '../utils/paginatedData'
 
 const lendings = ref([])
 const loading = ref(false)
@@ -44,33 +46,14 @@ const form = ref({
   due_at: defaultDueDate(),
 })
 
-function extractItems(response) {
-  if (Array.isArray(response)) return response
-  if (Array.isArray(response.data)) return response.data
-  if (Array.isArray(response.data?.data)) return response.data.data
-  return []
-}
-
-async function loadAllPages(fetchPage) {
-  const firstResponse = await fetchPage(1)
-  const items = extractItems(firstResponse)
-  const lastPage = Number(firstResponse?.meta?.last_page ?? 1)
-
-  for (let page = 2; page <= lastPage; page += 1) {
-    const response = await fetchPage(page)
-    items.push(...extractItems(response))
-  }
-
-  return items
-}
-
 async function loadLendings() {
   loading.value = true
   errorMessage.value = ''
 
   try {
-    const response = await lendingService.getAll()
-    lendings.value = extractItems(response)
+    lendings.value = await loadAllPages((page) =>
+      lendingService.getAll({ page }),
+    )
   } catch (error) {
     errorMessage.value =
       error.response?.data?.message ??
@@ -385,7 +368,12 @@ onMounted(() => {
       Memuat transaksi peminjaman...
     </div>
 
-    <div v-else class="panel table-wrapper">
+    <PaginatedTable
+      v-else
+      class="panel"
+      :items="lendings"
+      v-slot="{ pageItems }"
+    >
       <table>
         <thead>
           <tr>
@@ -400,7 +388,7 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr v-for="lending in lendings" :key="lending.id">
+          <tr v-for="lending in pageItems" :key="lending.id">
             <td>{{ lending.id }}</td>
             <td>
               <strong>{{ lending.member?.member_number ?? `ID ${lending.member_id}` }}</strong>
@@ -438,7 +426,7 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
-    </div>
+    </PaginatedTable>
 
     <div
       v-if="showReturnModal"

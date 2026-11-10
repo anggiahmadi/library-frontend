@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import PaginatedTable from '../components/PaginatedTable.vue'
 import { authorService } from '../services/authorService'
+import { loadAllPages } from '../utils/paginatedData'
 
 const authors = ref([])
 const loading = ref(false)
@@ -34,13 +36,6 @@ function emptyAuthor() {
 
 const form = ref(emptyAuthor())
 
-function extractItems(response) {
-  if (Array.isArray(response)) return response
-  if (Array.isArray(response.data)) return response.data
-  if (Array.isArray(response.data?.data)) return response.data.data
-  return []
-}
-
 function errorText(error, fallback) {
   const responseMessage = error.response?.data?.message
   const validationMessages = error.response?.data?.errors
@@ -55,8 +50,9 @@ async function loadAuthors() {
   errorMessage.value = ''
 
   try {
-    const response = await authorService.getAll({ total_per_page: 1000 })
-    authors.value = extractItems(response)
+    authors.value = await loadAllPages((page) =>
+      authorService.getAll({ page, total_per_page: 1000 }),
+    )
   } catch (error) {
     errorMessage.value = errorText(error, 'Data penulis gagal dimuat.')
   } finally {
@@ -217,7 +213,12 @@ onMounted(loadAuthors)
         Memuat data penulis...
       </div>
 
-      <div v-else class="panel table-wrapper">
+      <PaginatedTable
+        v-else
+        class="panel"
+        :items="filteredAuthors"
+        v-slot="{ pageItems }"
+      >
         <table>
           <thead>
             <tr>
@@ -229,7 +230,7 @@ onMounted(loadAuthors)
           </thead>
 
           <tbody>
-            <tr v-for="author in filteredAuthors" :key="author.id">
+            <tr v-for="author in pageItems" :key="author.id">
               <td>{{ author.name }}</td>
               <td class="author-biography">
                 {{ author.biography || '-' }}
@@ -267,7 +268,7 @@ onMounted(loadAuthors)
             </tr>
           </tbody>
         </table>
-      </div>
+      </PaginatedTable>
 
       <div
         v-if="showForm"
